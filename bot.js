@@ -33,7 +33,7 @@ function registerUser(user) {
     if (!users[userId]) {
         users[userId] = {
             id: userId,
-            name: ${user.first_name || ''} ${user.last_name || ''}.trim(),
+            name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
             username: user.username || '',
             canUseBot: false,
             queue: [],
@@ -44,6 +44,7 @@ function registerUser(user) {
         saveUsers();
     }
 }
+
 
 function checkUserPermission(userId) {
     return userId === adminId || users[userId]?.canUseBot;
