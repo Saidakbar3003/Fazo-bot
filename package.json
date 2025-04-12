@@ -19,4 +19,8 @@
     },
     "keywords": [],
     "description": ""
+    "scripts": {
+  "start": "node bot.js"
+}
+
 }
