@@ -306,11 +306,13 @@ bot.action(/revoke_(\d+)/, async (ctx) => {
     saveUsers();
 
     await ctx.answerCbQuery(`🚫 ${uid} dan ruxsat olib tashlandi`);
+    try {
+        await ctx.telegram.sendMessage(uid, '🚫 Sizning botdan foydalanish huquqingiz olib tashlandi.');
+    } catch (err) {
+        console.log(`Xabar yuborilmadi: ${uid}`);
+    }
 });
 
-bot.catch((err, ctx) => {
-    console.error('Botda xatolik:', err);
-});
 
 bot.launch(bot.launch({
   webhook: {
