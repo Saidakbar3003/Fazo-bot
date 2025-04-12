@@ -45,7 +45,6 @@ function registerUser(user) {
     }
 }
 
-
 function checkUserPermission(userId) {
     return userId === adminId || users[userId]?.canUseBot;
 }
@@ -86,7 +85,7 @@ async function startSurvey(ctx, userId) {
 
         const msg = await ctx.reply('Qaysi stanok uchun xizmat ko\'rsatildi?', {
             reply_markup: {
-                keyboard: Array.from({ length: 68 }, (_, i) => [{ text: ${i + 1} }]),
+                keyboard: Array.from({ length: 68 }, (_, i) => [{ text: `${i + 1}` }]),
                 resize_keyboard: true
             }
         });
@@ -116,12 +115,12 @@ bot.start((ctx) => {
     }
 
     if (!checkUserPermission(userId)) {
-        bot.telegram.sendMessage(adminId, 🆕 Yangi foydalanuvchi:\n🆔 ID: ${userId}\nIsmi: ${ctx.from.first_name} ${ctx.from.last_name || ''}\nUsername: @${ctx.from.username || 'Nomaʼlum'}, {
+        bot.telegram.sendMessage(adminId, `🆕 Yangi foydalanuvchi:\n🆔 ID: ${userId}\nIsmi: ${ctx.from.first_name} ${ctx.from.last_name || ''}\nUsername: @${ctx.from.username || 'Nomaʼlum'}`, {
             reply_markup: {
                 inline_keyboard: [
                     [
-                        { text: '✅ Ruxsat berish', callback_data: grant_${userId} },
-                        { text: '❌ Ruxsat bermaslik', callback_data: revoke_${userId} }
+                        { text: '✅ Ruxsat berish', callback_data: `grant_${userId}` },
+                        { text: '❌ Ruxsat bermaslik', callback_data: `revoke_${userId}` }
                     ]
                 ]
             }
@@ -167,13 +166,13 @@ bot.on('text', async (ctx) => {
     if (userId === adminId) {
         if (text === '📋 Foydalanuvchilar ro\'yxatini ko\'rish') {
             Object.values(users).forEach(user => {
-                const name = user.username ? @${user.username} : user.name;
+                const name = user.username ? `@${user.username}` : user.name;
                 const status = user.canUseBot ? '✅ Ruxsat berilgan' : '🚫 Ruxsat yo‘q';
-                ctx.reply(🆔 ID: ${user.id}\n👤 Foydalanuvchi: ${name}\n🔓 Holat: ${status}, {
+                ctx.reply(`🆔 ID: ${user.id}\n👤 Foydalanuvchi: ${name}\n🔓 Holat: ${status}`, {
                     reply_markup: {
                         inline_keyboard: [[
-                            { text: '✅ Ruxsat berish', callback_data: grant_${user.id} },
-                            { text: '❌ Ruxsat bermaslik', callback_data: revoke_${user.id} }
+                            { text: '✅ Ruxsat berish', callback_data: `grant_${user.id}` },
+                            { text: '❌ Ruxsat bermaslik', callback_data: `revoke_${user.id}` }
                         ]]
                     }
                 });
@@ -232,9 +231,9 @@ bot.on('text', async (ctx) => {
         users[userId].current.xizmat_oluvchi = text;
         const { photo, stanok, texnikXizmat, xizmat_oluvchi } = users[userId].current;
         const date = new Date();
-        const sana = ${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')};
+        const sana = `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
 
-        const caption = 📄 Ma'lumot:\n🕒 Sana va vaqt: ${sana}\n🔧 Stanok: ${stanok}\n🔍 Xizmat: ${texnikXizmat}\n👨‍🔧 Xizmat ko‘rsatuvchi: ${xizmat_oluvchi};
+        const caption = `📄 Ma'lumot:\n🕒 Sana va vaqt: ${sana}\n🔧 Stanok: ${stanok}\n🔍 Xizmat: ${texnikXizmat}\n👨‍🔧 Xizmat ko‘rsatuvchi: ${xizmat_oluvchi}`;
 
         try {
             const finalMessage = await ctx.replyWithPhoto(photo, { caption });
@@ -276,7 +275,7 @@ bot.action(/show_(.+)/, (ctx) => {
     const name = ctx.match[1];
     const logs = technicianLogs[name];
     if (!logs || logs.length === 0) {
-        return ctx.reply(📭 ${name} tomonidan xizmat yo‘q.);
+        return ctx.reply(`📭 ${name} tomonidan xizmat yo‘q.`);
     }
 
     logs.forEach(log => {
@@ -292,11 +291,11 @@ bot.action(/grant_(\d+)/, async (ctx) => {
     users[uid].canUseBot = true;
     saveUsers();
 
-    await ctx.answerCbQuery(✅ ${uid} ga ruxsat berildi);
+    await ctx.answerCbQuery(`✅ ${uid} ga ruxsat berildi`);
     try {
         await ctx.telegram.sendMessage(uid, '✅ Sizga ruxsat berildi. Endi botdan foydalanishingiz mumkin.');
     } catch (err) {
-        console.log(Xabar yuborilmadi: ${uid});
+        console.log(`Xabar yuborilmadi: ${uid}`);
     }
 });
 
@@ -306,11 +305,11 @@ bot.action(/revoke_(\d+)/, async (ctx) => {
     users[uid].canUseBot = false;
     saveUsers();
 
-    await ctx.answerCbQuery(🚫 ${uid} dan ruxsat olib tashlandi);
+    await ctx.answerCbQuery(`🚫 ${uid} dan ruxsat olib tashlandi`);
 });
 
 bot.catch((err, ctx) => {
     console.error('Botda xatolik:', err);
 });
 
-bot.launch(); 
+bot.launch();
