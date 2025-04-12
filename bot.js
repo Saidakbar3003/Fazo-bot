@@ -1,5 +1,3 @@
-// bot.js — YANGILANGAN TO‘LIQ KOD
-
 const { Telegraf } = require('telegraf');
 const dotenv = require('dotenv');
 const fs = require('fs');
@@ -33,7 +31,7 @@ function registerUser(user) {
     if (!users[userId]) {
         users[userId] = {
             id: userId,
-            name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+            name: `${(user.first_name || '')} ${(user.last_name || '')}`.trim(),
             username: user.username || '',
             canUseBot: false,
             queue: [],
@@ -313,11 +311,10 @@ bot.action(/revoke_(\d+)/, async (ctx) => {
     }
 });
 
-
-bot.launch(bot.launch({
-  webhook: {
-    domain: process.env.RENDER_EXTERNAL_URL,
-    port: process.env.PORT || 3000,
-  }
+// ✅ TO‘G‘RI LAUNCH
+bot.launch({
+    webhook: {
+        domain: process.env.RENDER_EXTERNAL_URL,
+        port: process.env.PORT || 3000
+    }
 });
-);
