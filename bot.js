@@ -312,4 +312,10 @@ bot.catch((err, ctx) => {
     console.error('Botda xatolik:', err);
 });
 
-bot.launch();
+bot.launch(bot.launch({
+  webhook: {
+    domain: process.env.RENDER_EXTERNAL_URL,
+    port: process.env.PORT || 3000,
+  }
+});
+);
