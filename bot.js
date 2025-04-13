@@ -30,17 +30,15 @@ app.get('/', (req, res) => {
     res.send('Bot ishga tushdi ✅');
 });
 
-// Foydalanuvchilarni yuklash/saqlash
+// Load/save users
 function loadUsers() {
     if (fs.existsSync(USERS_FILE)) {
         users = JSON.parse(fs.readFileSync(USERS_FILE));
     }
 }
-
 function saveUsers() {
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
-
 function registerUser(user) {
     const userId = user.id;
     if (!users[userId]) {
@@ -57,16 +55,13 @@ function registerUser(user) {
         saveUsers();
     }
 }
-
 function checkUserPermission(userId) {
     return userId === adminId || users[userId]?.canUseBot;
 }
-
 function saveMessageId(userId, messageId) {
     if (!userMessageIds[userId]) userMessageIds[userId] = [];
     userMessageIds[userId].push(messageId);
 }
-
 function deletePreviousMessages(ctx, userId) {
     const messages = userMessageIds[userId] || [];
     for (const msgId of messages) {
@@ -76,7 +71,6 @@ function deletePreviousMessages(ctx, userId) {
     }
     userMessageIds[userId] = [];
 }
-
 async function startSurvey(ctx, userId) {
     if (users[userId].processing || users[userId].current) return;
     const current = users[userId].queue.shift();
@@ -86,16 +80,13 @@ async function startSurvey(ctx, userId) {
         saveUsers();
         return;
     }
-
     users[userId].processing = true;
     users[userId].current = { photo: current, stanok: null, texnikXizmat: null, xizmat_oluvchi: null };
     users[userId].step = 'stanok';
     saveUsers();
-
     try {
         const photoMsg = await ctx.replyWithPhoto(current, { caption: '🖼 Ushbu rasm uchun savollar boshlanadi.' });
         saveMessageId(userId, photoMsg.message_id);
-
         const msg = await ctx.reply('Qaysi stanok uchun xizmat ko\'rsatildi?', {
             reply_markup: {
                 keyboard: Array.from({ length: 68 }, (_, i) => [{ text: `${i + 1}` }]),
@@ -274,7 +265,7 @@ bot.on('text', async (ctx) => {
             resize_keyboard: true
         } : { remove_keyboard: true };
 
-        ctx.reply('✅ Maʼlumot yuborildi. ', {
+        ctx.reply('✅ Maʼlumot yuborildi.', {
             reply_markup: replyMarkup
         });
 
@@ -326,7 +317,6 @@ bot.action(/revoke_(\d+)/, async (ctx) => {
     }
 });
 
-// Express serverni ishga tushurish
 app.listen(PORT, () => {
     console.log(`🌐 Bot ishga tushdi (webhook mode): http://localhost:${PORT}`);
 });
