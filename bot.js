@@ -21,6 +21,16 @@ const technicianLogs = {
     'A.Saidakbar': []
 };
 
+// Webhook setup
+app.use(bot.webhookCallback('/bot'));
+bot.telegram.setWebhook(`${DOMAIN}/bot`);
+
+// Monitoring route
+app.get('/', (req, res) => {
+    res.send('Bot ishga tushdi ✅');
+});
+
+// Foydalanuvchilarni yuklash/saqlash
 function loadUsers() {
     if (fs.existsSync(USERS_FILE)) {
         users = JSON.parse(fs.readFileSync(USERS_FILE));
@@ -46,7 +56,6 @@ function registerUser(user) {
         };
         saveUsers();
     }
-    console.log('📥 Foydalanuvchi ro‘yxatga olindi:', users[userId]);
 }
 
 function checkUserPermission(userId) {
@@ -86,16 +95,14 @@ async function startSurvey(ctx, userId) {
     try {
         const photoMsg = await ctx.replyWithPhoto(current, { caption: '🖼 Ushbu rasm uchun savollar boshlanadi.' });
         saveMessageId(userId, photoMsg.message_id);
-        console.log('📷 Rasm yuborildi (savol boshlanishi):', current);
 
-        const msg = await ctx.reply("Qaysi stanok uchun xizmat ko'rsatildi?", {
+        const msg = await ctx.reply('Qaysi stanok uchun xizmat ko\'rsatildi?', {
             reply_markup: {
                 keyboard: Array.from({ length: 68 }, (_, i) => [{ text: `${i + 1}` }]),
                 resize_keyboard: true
             }
         });
         saveMessageId(userId, msg.message_id);
-        console.log('❓ Stanok so‘rovi yuborildi');
     } catch (e) {
         console.log("Xatolik survey boshlashda:", e);
         users[userId].processing = false;
@@ -104,21 +111,16 @@ async function startSurvey(ctx, userId) {
 
 loadUsers();
 
-bot.on('message', (ctx) => {
-    console.log('📥 Kiruvchi xabar:', ctx.message);
-});
-
 bot.start((ctx) => {
     const userId = ctx.from.id;
     registerUser(ctx.from);
 
     if (userId === adminId) {
-        console.log('👑 Admin start bosdi');
         return ctx.reply('🤖 Xush kelibsiz, hurmatli admin!', {
             reply_markup: {
                 keyboard: [
                     ['👨‍🔧 Ustalar faoliyati'],
-                    ["📋 Foydalanuvchilar ro'yxatini ko'rish"]
+                    ['📋 Foydalanuvchilar ro\'yxatini ko\'rish']
                 ],
                 resize_keyboard: true
             }
@@ -137,13 +139,11 @@ bot.start((ctx) => {
             }
         });
 
-        console.log('🚫 Foydalanuvchiga ruxsat yo‘q:', userId);
         return ctx.reply('👋 Xush kelibsiz!\n❌ Sizga hali ruxsat berilmagan. Iltimos, admin ruxsatini kuting.', {
             reply_markup: { remove_keyboard: true }
         });
     }
 
-    console.log('✅ Ruxsatli foydalanuvchi start bosdi:', userId);
     ctx.reply('✅ Xush kelibsiz! Botdan foydalanish uchun rasm yuboring.', {
         reply_markup: { remove_keyboard: true }
     });
@@ -159,7 +159,6 @@ bot.on('photo', async (ctx) => {
     saveUsers();
 
     saveMessageId(userId, ctx.message.message_id);
-    console.log('📸 Rasm qabul qilindi:', photoId);
 
     if (!users[userId].processing && !users[userId].current) {
         deletePreviousMessages(ctx, userId);
@@ -167,20 +166,167 @@ bot.on('photo', async (ctx) => {
     }
 });
 
-// Webhook route
-app.use(bot.webhookCallback('/bot'));
+bot.on('text', async (ctx) => {
+    const userId = ctx.from.id;
+    const text = ctx.message.text;
+    registerUser(ctx.from);
+    saveMessageId(userId, ctx.message.message_id);
 
-app.get('/', (req, res) => {
-    res.send('Bot ishga tushdi ✅');
+    if (!checkUserPermission(userId) && userId !== adminId) {
+        return ctx.reply('❌ Sizga hali ruxsat yo‘q.');
+    }
+
+    if (userId === adminId) {
+        if (text === '📋 Foydalanuvchilar ro\'yxatini ko\'rish') {
+            Object.values(users).forEach(user => {
+                const name = user.username ? `@${user.username}` : user.name;
+                const status = user.canUseBot ? '✅ Ruxsat berilgan' : '🚫 Ruxsat yo‘q';
+                ctx.reply(`🆔 ID: ${user.id}\n👤 Foydalanuvchi: ${name}\n🔓 Holat: ${status}`, {
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { text: '✅ Ruxsat berish', callback_data: `grant_${user.id}` },
+                            { text: '❌ Ruxsat bermaslik', callback_data: `revoke_${user.id}` }
+                        ]]
+                    }
+                });
+            });
+            return;
+        }
+
+        if (text === '👨‍🔧 Ustalar faoliyati') {
+            return ctx.reply('Qaysi usta faoliyatini ko‘rmoqchisiz?', {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '👨‍🔧 K.Abdufatto', callback_data: 'show_K.Abdufatto' }],
+                        [{ text: '👨‍🔧 A.Saidakbar', callback_data: 'show_A.Saidakbar' }]
+                    ]
+                }
+            });
+        }
+    }
+
+    const step = users[userId]?.step;
+    const current = users[userId]?.current;
+    if (!step || !current) return;
+
+    if (step === 'stanok' && !isNaN(text)) {
+        users[userId].current.stanok = text;
+        users[userId].step = 'texnik_xizmat';
+        saveUsers();
+
+        return ctx.reply('Texnik xizmat turini tanlang:', {
+            reply_markup: {
+                keyboard: [
+                    ['Накапител плата', 'Накапител сенсор'],
+                    ['Филер сенсор', 'Филер плата'],
+                    ['Инвертор', 'Серво мотор'],
+                    ['Материнский плата', 'Блок питания']
+                ],
+                resize_keyboard: true
+            }
+        }).then(msg => saveMessageId(userId, msg.message_id));
+    }
+
+    if (step === 'texnik_xizmat') {
+        users[userId].current.texnikXizmat = text;
+        users[userId].step = 'xizmat_oluvchi';
+        saveUsers();
+
+        return ctx.reply('Kim tomonidan xizmat ko‘rsatildi?', {
+            reply_markup: {
+                keyboard: [['K.Abdufatto', 'A.Saidakbar']],
+                resize_keyboard: true
+            }
+        }).then(msg => saveMessageId(userId, msg.message_id));
+    }
+
+    if (step === 'xizmat_oluvchi') {
+        users[userId].current.xizmat_oluvchi = text;
+        const { photo, stanok, texnikXizmat, xizmat_oluvchi } = users[userId].current;
+        const date = new Date();
+        const sana = `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+        const caption = `📄 Ma'lumot:\n🕒 Sana va vaqt: ${sana}\n🔧 Stanok: ${stanok}\n🔍 Xizmat: ${texnikXizmat}\n👨‍🔧 Xizmat ko‘rsatuvchi: ${xizmat_oluvchi}`;
+
+        try {
+            const finalMessage = await ctx.replyWithPhoto(photo, { caption });
+            userFinalMessageId[userId] = finalMessage.message_id;
+        } catch (err) {
+            console.error('Rasm yuborishda xato:', err);
+        }
+
+        deletePreviousMessages(ctx, userId);
+
+        if (technicianLogs[xizmat_oluvchi]) {
+            technicianLogs[xizmat_oluvchi].push({ photo, caption });
+        }
+
+        users[userId].current = null;
+        users[userId].step = null;
+        users[userId].processing = false;
+        saveUsers();
+
+        const replyMarkup = (userId === adminId) ? {
+            keyboard: [
+                ['👨‍🔧 Ustalar faoliyati'],
+                ['📋 Foydalanuvchilar ro\'yxatini ko\'rish']
+            ],
+            resize_keyboard: true
+        } : { remove_keyboard: true };
+
+        ctx.reply('✅ Maʼlumot yuborildi. ', {
+            reply_markup: replyMarkup
+        });
+
+        if (users[userId].queue.length > 0) {
+            await startSurvey(ctx, userId);
+        }
+    }
 });
 
-// Webhook URL ni server ishga tushgandan so‘ng o‘rnatish
-app.listen(PORT, async () => {
-    console.log(`🌐 Server ishga tushdi: http://localhost:${PORT}`);
-    try {
-        await bot.telegram.setWebhook(`${DOMAIN}/bot`);
-        console.log('✅ Webhook o‘rnatildi:', `${DOMAIN}/bot`);
-    } catch (err) {
-        console.error('❌ Webhookni o‘rnatishda xatolik:', err);
+bot.action(/show_(.+)/, (ctx) => {
+    const name = ctx.match[1];
+    const logs = technicianLogs[name];
+    if (!logs || logs.length === 0) {
+        return ctx.reply(`📭 ${name} tomonidan xizmat yo‘q.`);
     }
+
+    logs.forEach(log => {
+        ctx.replyWithPhoto(log.photo, { caption: log.caption });
+    });
+
+    ctx.answerCbQuery();
+});
+
+bot.action(/grant_(\d+)/, async (ctx) => {
+    const uid = ctx.match[1];
+    registerUser({ id: parseInt(uid) });
+    users[uid].canUseBot = true;
+    saveUsers();
+
+    await ctx.answerCbQuery(`✅ ${uid} ga ruxsat berildi`);
+    try {
+        await ctx.telegram.sendMessage(uid, '✅ Sizga ruxsat berildi. Endi botdan foydalanishingiz mumkin.');
+    } catch (err) {
+        console.log(`Xabar yuborilmadi: ${uid}`);
+    }
+});
+
+bot.action(/revoke_(\d+)/, async (ctx) => {
+    const uid = ctx.match[1];
+    registerUser({ id: parseInt(uid) });
+    users[uid].canUseBot = false;
+    saveUsers();
+
+    await ctx.answerCbQuery(`🚫 ${uid} dan ruxsat olib tashlandi`);
+    try {
+        await ctx.telegram.sendMessage(uid, '🚫 Sizning botdan foydalanish huquqingiz olib tashlandi.');
+    } catch (err) {
+        console.log(`Xabar yuborilmadi: ${uid}`);
+    }
+});
+
+// Express serverni ishga tushurish
+app.listen(PORT, () => {
+    console.log(`🌐 Bot ishga tushdi (webhook mode): http://localhost:${PORT}`);
 });
