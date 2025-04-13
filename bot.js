@@ -2,13 +2,15 @@ const { Telegraf } = require('telegraf');
 const dotenv = require('dotenv');
 const fs = require('fs');
 const express = require('express');
-const fetch = require('node-fetch'); // Self-ping uchun fetch
+const fetch = require('node-fetch');
 
 dotenv.config();
 
 const TOKEN = process.env.BOT_TOKEN;
 const DOMAIN = 'https://fazo-bot.onrender.com';
 const PORT = process.env.PORT || 3000;
+const RENDER_DEPLOY_URL = 'https://api.render.com/deploy/srv-cvt7du95pdvs739h3pj0?key=txzklcHbGFw';
+
 const bot = new Telegraf(TOKEN);
 const app = express();
 
@@ -22,16 +24,20 @@ const technicianLogs = {
     'A.Saidakbar': []
 };
 
-// Webhook setup
 app.use(bot.webhookCallback('/bot'));
 bot.telegram.setWebhook(`${DOMAIN}/bot`);
 
-// Monitoring route
 app.get('/', (req, res) => {
     res.send('Bot ishga tushdi ✅');
 });
 
-// Load/save users
+// 🔁 Self-ping to keep server awake
+setInterval(() => {
+    fetch(DOMAIN)
+        .then(() => console.log('🔁 Self-ping yuborildi.'))
+        .catch(err => console.log('⚠️ Self-ping xatoligi:', err));
+}, 60 * 1000);
+
 function loadUsers() {
     if (fs.existsSync(USERS_FILE)) {
         users = JSON.parse(fs.readFileSync(USERS_FILE));
@@ -103,6 +109,7 @@ async function startSurvey(ctx, userId) {
 
 loadUsers();
 
+// 🔰 Bot boshlanishi
 bot.start((ctx) => {
     const userId = ctx.from.id;
     registerUser(ctx.from);
@@ -112,7 +119,8 @@ bot.start((ctx) => {
             reply_markup: {
                 keyboard: [
                     ['👨‍🔧 Ustalar faoliyati'],
-                    ['📋 Foydalanuvchilar ro\'yxatini ko\'rish']
+                    ['📋 Foydalanuvchilar ro\'yxatini ko\'rish'],
+                    ['♻️ Redeploy']
                 ],
                 resize_keyboard: true
             }
@@ -141,6 +149,7 @@ bot.start((ctx) => {
     });
 });
 
+// 🖼 Foto yuborish
 bot.on('photo', async (ctx) => {
     const userId = ctx.from.id;
     registerUser(ctx.from);
@@ -158,6 +167,7 @@ bot.on('photo', async (ctx) => {
     }
 });
 
+// 📋 Matnli bosqichlar
 bot.on('text', async (ctx) => {
     const userId = ctx.from.id;
     const text = ctx.message.text;
@@ -191,6 +201,16 @@ bot.on('text', async (ctx) => {
                     inline_keyboard: [
                         [{ text: '👨‍🔧 K.Abdufatto', callback_data: 'show_K.Abdufatto' }],
                         [{ text: '👨‍🔧 A.Saidakbar', callback_data: 'show_A.Saidakbar' }]
+                    ]
+                }
+            });
+        }
+
+        if (text === '♻️ Redeploy') {
+            return ctx.reply('♻️ Redeploy qilishni tasdiqlang:', {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: 'Redeploy qilish', callback_data: 'do_redeploy' }]
                     ]
                 }
             });
@@ -261,14 +281,13 @@ bot.on('text', async (ctx) => {
         const replyMarkup = (userId === adminId) ? {
             keyboard: [
                 ['👨‍🔧 Ustalar faoliyati'],
-                ['📋 Foydalanuvchilar ro\'yxatini ko\'rish']
+                ['📋 Foydalanuvchilar ro\'yxatini ko\'rish'],
+                ['♻️ Redeploy']
             ],
             resize_keyboard: true
         } : { remove_keyboard: true };
 
-        ctx.reply('✅ Maʼlumot yuborildi.', {
-            reply_markup: replyMarkup
-        });
+        ctx.reply('✅ Maʼlumot yuborildi.', { reply_markup: replyMarkup });
 
         if (users[userId].queue.length > 0) {
             await startSurvey(ctx, userId);
@@ -276,6 +295,7 @@ bot.on('text', async (ctx) => {
     }
 });
 
+// 👨‍🔧 Usta faoliyati
 bot.action(/show_(.+)/, (ctx) => {
     const name = ctx.match[1];
     const logs = technicianLogs[name];
@@ -290,6 +310,7 @@ bot.action(/show_(.+)/, (ctx) => {
     ctx.answerCbQuery();
 });
 
+// ✅ Ruxsat berish / ❌ Ruxsat bekor qilish
 bot.action(/grant_(\d+)/, async (ctx) => {
     const uid = ctx.match[1];
     registerUser({ id: parseInt(uid) });
@@ -299,9 +320,7 @@ bot.action(/grant_(\d+)/, async (ctx) => {
     await ctx.answerCbQuery(`✅ ${uid} ga ruxsat berildi`);
     try {
         await ctx.telegram.sendMessage(uid, '✅ Sizga ruxsat berildi. Endi botdan foydalanishingiz mumkin.');
-    } catch (err) {
-        console.log(`Xabar yuborilmadi: ${uid}`);
-    }
+    } catch {}
 });
 
 bot.action(/revoke_(\d+)/, async (ctx) => {
@@ -313,18 +332,25 @@ bot.action(/revoke_(\d+)/, async (ctx) => {
     await ctx.answerCbQuery(`🚫 ${uid} dan ruxsat olib tashlandi`);
     try {
         await ctx.telegram.sendMessage(uid, '🚫 Sizning botdan foydalanish huquqingiz olib tashlandi.');
-    } catch (err) {
-        console.log(`Xabar yuborilmadi: ${uid}`);
+    } catch {}
+});
+
+// ♻️ Redeploy tugmasi
+bot.action('do_redeploy', async (ctx) => {
+    if (ctx.from.id !== adminId) return ctx.answerCbQuery('❌ Faqat admin ishlata oladi.');
+
+    try {
+        await fetch(RENDER_DEPLOY_URL, { method: 'POST' });
+        await ctx.answerCbQuery('✅ Redeploy boshlandi');
+        await ctx.reply('🛠 Bot redeploy qilinmoqda...');
+    } catch (error) {
+        console.error('Redeploy xatoligi:', error);
+        await ctx.answerCbQuery('❌ Xatolik yuz berdi');
+        await ctx.reply('⚠️ Redeploy qilishda xatolik.');
     }
 });
 
+// 🚀 Serverni ishga tushirish
 app.listen(PORT, () => {
     console.log(`🌐 Bot ishga tushdi (webhook mode): http://localhost:${PORT}`);
 });
-
-// 🔁 Self-ping to keep Render app awake
-setInterval(() => {
-    fetch(DOMAIN)
-        .then(() => console.log('🔁 Self-ping yuborildi.'))
-        .catch(err => console.log('⚠️ Self-ping xatoligi:', err));
-}, 60 * 1000);
