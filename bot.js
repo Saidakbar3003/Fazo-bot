@@ -98,7 +98,8 @@ async function startSurvey(ctx, userId) {
         saveMessageId(userId, photoMsg.message_id);
         console.log('📷 Rasm yuborildi (savol boshlanishi):', current);
 
-        const msg = await ctx.reply('Qaysi stanok uchun xizmat ko'rsatildi?', {
+       const msg = await ctx.reply("Qaysi stanok uchun xizmat ko'rsatildi?", {
+
             reply_markup: {
                 keyboard: Array.from({ length: 68 }, (_, i) => [{ text: `${i + 1}` }]),
                 resize_keyboard: true
