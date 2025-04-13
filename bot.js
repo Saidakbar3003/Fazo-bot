@@ -1,7 +1,7 @@
 const { Telegraf } = require('telegraf');
 const dotenv = require('dotenv');
 const fs = require('fs');
-
+const express = require('express');
 dotenv.config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -311,7 +311,19 @@ bot.action(/revoke_(\d+)/, async (ctx) => {
     }
 });
 
-// 🔄 Long polling bilan ishga tushirish
-bot.launch().then(() => {
-    console.log('🤖 Bot ishga tushdi (long polling)');
-});
+// === Webhook yoki long pollingni aniqlash ===
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
+
+if (WEBHOOK_URL) {
+    const app = express();
+    app.use(bot.webhookCallback('/telegram-webhook'));
+
+    bot.telegram.setWebhook(`${WEBHOOK_URL}/telegram-webhook`);
+    app.listen(3000, () => {
+        console.log('🌐 Bot ishga tushdi (webhook mode): http://localhost:3000');
+    });
+} else {
+    bot.launch().then(() => {
+        console.log('🤖 Bot ishga tushdi (long polling)');
+    });
+}
