@@ -2,6 +2,7 @@ const { Telegraf } = require('telegraf');
 const dotenv = require('dotenv');
 const fs = require('fs');
 const express = require('express');
+const fetch = require('node-fetch'); // Self-ping uchun fetch
 
 dotenv.config();
 
@@ -320,3 +321,10 @@ bot.action(/revoke_(\d+)/, async (ctx) => {
 app.listen(PORT, () => {
     console.log(`🌐 Bot ishga tushdi (webhook mode): http://localhost:${PORT}`);
 });
+
+// 🔁 Self-ping to keep Render app awake
+setInterval(() => {
+    fetch(DOMAIN)
+        .then(() => console.log('🔁 Self-ping yuborildi.'))
+        .catch(err => console.log('⚠️ Self-ping xatoligi:', err));
+}, 60 * 1000);
