@@ -2,11 +2,16 @@ const { Telegraf } = require('telegraf');
 const dotenv = require('dotenv');
 const fs = require('fs');
 const express = require('express');
+
 dotenv.config();
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
-const adminId = parseInt(process.env.ADMIN_ID);
+const TOKEN = process.env.BOT_TOKEN;
+const DOMAIN = 'https://fazo-bot.onrender.com';
+const PORT = process.env.PORT || 3000;
+const bot = new Telegraf(TOKEN);
+const app = express();
 
+const adminId = parseInt(process.env.ADMIN_ID);
 const USERS_FILE = 'users.json';
 let users = {};
 let userMessageIds = {};
@@ -16,6 +21,16 @@ const technicianLogs = {
     'A.Saidakbar': []
 };
 
+// Webhook setup
+app.use(bot.webhookCallback('/bot'));
+bot.telegram.setWebhook(`${DOMAIN}/bot`);
+
+// Monitoring route
+app.get('/', (req, res) => {
+    res.send('Bot ishga tushdi ✅');
+});
+
+// Foydalanuvchilarni yuklash/saqlash
 function loadUsers() {
     if (fs.existsSync(USERS_FILE)) {
         users = JSON.parse(fs.readFileSync(USERS_FILE));
@@ -311,6 +326,10 @@ bot.action(/revoke_(\d+)/, async (ctx) => {
     }
 });
 
+// Express serverni ishga tushurish
+app.listen(PORT, () => {
+    console.log(`🌐 Bot ishga tushdi (webhook mode): http://localhost:${PORT}`);
+});
 // === Webhook yoki long pollingni aniqlash ===
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
