@@ -113,8 +113,7 @@ bot.start((ctx) => {
             reply_markup: {
                 keyboard: [
                     ['👨‍🔧 Ustalar faoliyati'],
-                    ['📋 Foydalanuvchilar ro\'yxatini ko\'rish'],
-                    ['♻️ Redeploy'] // <<=== Admin uchun tugma
+                    ['📋 Foydalanuvchilar ro\'yxatini ko\'rish']
                 ],
                 resize_keyboard: true
             }
@@ -143,31 +142,22 @@ bot.start((ctx) => {
     });
 });
 
-// Admin uchun redeploy tugmasi
-bot.hears('♻️ Redeploy', (ctx) => {
-    if (ctx.from.id !== adminId) return;
-    ctx.reply('♻️ Redeploy qilishni tasdiqlang:', {
-        reply_markup: {
-            inline_keyboard: [
-                [{ text: '♻️ Redeploy', callback_data: 'do_redeploy' }]
-            ]
-        }
-    });
-});
-
-bot.action('do_redeploy', async (ctx) => {
-    if (ctx.from.id !== adminId) return ctx.answerCbQuery('Faqat admin ishlata oladi.');
-
+bot.command('redeploy', async (ctx) => {
+    if (ctx.from.id !== adminId) return ctx.reply('❌ Sizda ruxsat yo‘q.');
     try {
-        await fetch(DEPLOY_HOOK_URL, { method: 'POST' });
-        await ctx.answerCbQuery('✅ Redeploy boshlandi');
-        await ctx.reply('🛠 Bot redeploy qilinmoqda...');
-    } catch (error) {
-        console.error('Redeploy xatoligi:', error);
-        await ctx.answerCbQuery('❌ Xatolik yuz berdi');
-        await ctx.reply('⚠️ Redeploy qilishda xatolik.');
+        const res = await fetch(DEPLOY_HOOK_URL, { method: 'POST' });
+        if (res.ok) {
+            ctx.reply('🔄 Redeploy muvaffaqiyatli yuborildi.');
+        } else {
+            ctx.reply('⚠️ Redeploy yuborishda xatolik.');
+        }
+    } catch (err) {
+        console.error(err);
+        ctx.reply('❌ Xatolik yuz berdi.');
     }
 });
+
+// ... (shu yerga qolgan `bot.on('photo')`, `bot.on('text')`, `bot.action` funksiyalaringizni kiritasiz – siz allaqachon ularni yozgansiz, yuqorida)
 
 // Express listener
 app.listen(PORT, () => {
