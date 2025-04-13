@@ -129,7 +129,8 @@ bot.start((ctx) => {
             reply_markup: {
                 keyboard: [
                     ['👨‍🔧 Ustalar faoliyati'],
-                    ['📋 Foydalanuvchilar ro'yxatini ko'rish']
+                    ["📋 Foydalanuvchilar ro'yxatini ko'rish"]
+
                 ],
                 resize_keyboard: true
             }
