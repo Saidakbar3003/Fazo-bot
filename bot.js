@@ -21,16 +21,6 @@ const technicianLogs = {
     'A.Saidakbar': []
 };
 
-// Webhook setup
-app.use(bot.webhookCallback('/bot'));
-bot.telegram.setWebhook(`${DOMAIN}/bot`);
-
-// Monitoring route
-app.get('/', (req, res) => {
-    res.send('Bot ishga tushdi ✅');
-});
-
-// Foydalanuvchilarni yuklash/saqlash
 function loadUsers() {
     if (fs.existsSync(USERS_FILE)) {
         users = JSON.parse(fs.readFileSync(USERS_FILE));
@@ -98,8 +88,7 @@ async function startSurvey(ctx, userId) {
         saveMessageId(userId, photoMsg.message_id);
         console.log('📷 Rasm yuborildi (savol boshlanishi):', current);
 
-       const msg = await ctx.reply("Qaysi stanok uchun xizmat ko'rsatildi?", {
-
+        const msg = await ctx.reply("Qaysi stanok uchun xizmat ko'rsatildi?", {
             reply_markup: {
                 keyboard: Array.from({ length: 68 }, (_, i) => [{ text: `${i + 1}` }]),
                 resize_keyboard: true
@@ -130,7 +119,6 @@ bot.start((ctx) => {
                 keyboard: [
                     ['👨‍🔧 Ustalar faoliyati'],
                     ["📋 Foydalanuvchilar ro'yxatini ko'rish"]
-
                 ],
                 resize_keyboard: true
             }
@@ -179,7 +167,20 @@ bot.on('photo', async (ctx) => {
     }
 });
 
-// Express serverni ishga tushurish
-app.listen(PORT, () => {
-    console.log(`🌐 Bot ishga tushdi (webhook mode): http://localhost:${PORT}`);
+// Webhook route
+app.use(bot.webhookCallback('/bot'));
+
+app.get('/', (req, res) => {
+    res.send('Bot ishga tushdi ✅');
+});
+
+// Webhook URL ni server ishga tushgandan so‘ng o‘rnatish
+app.listen(PORT, async () => {
+    console.log(`🌐 Server ishga tushdi: http://localhost:${PORT}`);
+    try {
+        await bot.telegram.setWebhook(`${DOMAIN}/bot`);
+        console.log('✅ Webhook o‘rnatildi:', `${DOMAIN}/bot`);
+    } catch (err) {
+        console.error('❌ Webhookni o‘rnatishda xatolik:', err);
+    }
 });
