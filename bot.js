@@ -31,7 +31,7 @@ function registerUser(user) {
     if (!users[userId]) {
         users[userId] = {
             id: userId,
-            name: `${(user.first_name || '')} ${(user.last_name || '')}`.trim(),
+            name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
             username: user.username || '',
             canUseBot: false,
             queue: [],
@@ -311,10 +311,7 @@ bot.action(/revoke_(\d+)/, async (ctx) => {
     }
 });
 
-// ✅ TO‘G‘RI LAUNCH
-bot.launch({
-    webhook: {
-        domain: process.env.RENDER_EXTERNAL_URL,
-        port: process.env.PORT || 3000
-    }
+// 🔄 Long polling bilan ishga tushirish
+bot.launch().then(() => {
+    console.log('🤖 Bot ishga tushdi (long polling)');
 });
