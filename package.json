@@ -9,7 +9,7 @@
   "license": "ISC",
   "dependencies": {
     "@telegraf/session": "^2.0.0-beta.7",
-    "dotenv": "^16.5.0",
+    "dotenv": "^16.6.1",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "moment": "^2.30.1",
